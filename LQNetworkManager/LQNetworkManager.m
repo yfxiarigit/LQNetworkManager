@@ -74,12 +74,12 @@
                 
             } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
                 
-                [self log:[NSString stringWithFormat:@"========>\n%@ success: %@\n%@", task.currentRequest.HTTPMethod, task.currentRequest.URL, responseObject]];
+                [self logRequestSucessWithType:@"Get" response:task.response responseObject:responseObject];
                 completion(responseObject, nil);
                 
             } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
                 
-                [self logRequestFail:error];
+                [self logRequestFailWithType:@"Get" error:error];
                 completion(nil, error);
                 
             }];
@@ -96,12 +96,12 @@
                 
             } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
                 
-                [self log:[NSString stringWithFormat:@"========>\n%@ success: %@\n%@", task.currentRequest.HTTPMethod, task.currentRequest.URL, responseObject]];
+                [self logRequestSucessWithType:@"Post" response:task.response responseObject:responseObject];
                 completion(responseObject, nil);
                 
             } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
                 
-                [self logRequestFail:error];
+                [self logRequestFailWithType:@"Post" error:error];
                 completion(nil, error);
             }];
             
@@ -146,7 +146,7 @@
             [self log:[NSString stringWithFormat:@"========>\nDownload success: %@\nsaveToPath: %@", response.URL, filePath.absoluteString]];
             completion(filePath.absoluteString, nil);
         } else {
-            [self log:[NSString stringWithFormat:@"========>\nDownload fail: %@\n: %@", response.URL, error.userInfo]];
+            [self logRequestFailWithType:@"Download" error:error];
             completion(nil, error);
         }
         
@@ -182,10 +182,10 @@
     } completionHandler:^(NSURLResponse * _Nonnull response, id  _Nullable responseObject, NSError * _Nullable error) {
         
         if (!error) {
-            [self log:[NSString stringWithFormat:@"========>\nUpload success: %@\n%@", response.URL, responseObject]];
+            [self logRequestSucessWithType:@"Upload" response:response responseObject:responseObject];
             completion(response, nil);
         } else {
-            [self log:[NSString stringWithFormat:@"========>\nUpload fail: %@\n: %@", response.URL, error.userInfo]];
+            [self logRequestFailWithType:@"Upload" error:error];
             completion(nil, error);
         }
         
@@ -232,12 +232,12 @@
         
     } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
         
-        [self log:[NSString stringWithFormat:@"========>\nUpload success: %@\n%@", task.currentRequest.URL, responseObject]];
+        [self logRequestSucessWithType:@"Upload" response:task.response responseObject:responseObject];
         completion(responseObject, nil);
 
     } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
         
-        [self log:[NSString stringWithFormat:@"========>\nUpload fail: %@\n%@", task.currentRequest.URL, error.userInfo]];
+        [self logRequestFailWithType:@"Upload" error:error];
         completion(nil, error);
 
     }];
@@ -270,56 +270,89 @@
     }];
 }
 
-# pragma mark - Getter
+# pragma mark - Getter Setter
 - (AFHTTPSessionManager *)sessionManager {
     if (!_sessionManager) {
-        if (self.networkConfig.baseURLString) {
-            _sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:[NSURL URLWithString:self.networkConfig.baseURLString]];
-        } else {
-            _sessionManager = [[AFHTTPSessionManager alloc] init];
-        }
-        
-        switch (self.networkConfig.requestType) {
-            case LQRequestSerializeJSON: {
-                _sessionManager.requestSerializer = [AFJSONRequestSerializer serializer];
-                break;
-            }
-            case LQRequestSerializeHTTP: {
-                _sessionManager.requestSerializer = [AFHTTPRequestSerializer serializer];
-                break;
-            }
-        }
-        
-        switch (self.networkConfig.responseType) {
-            case LQResponseSerializeJSON: {
-                AFJSONResponseSerializer *responseSerializer = [AFJSONResponseSerializer serializer];
-                responseSerializer.removesKeysWithNullValues = self.networkConfig.removesKeysWithNullValues;
-                _sessionManager.responseSerializer = responseSerializer;
-                break;
-            }
-            case LQResponseSerializeData: {
-                _sessionManager.responseSerializer = [AFHTTPResponseSerializer serializer];
-                break;
-            }
-        }
-        
-        [self.networkConfig.httpHeaders enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-            [_sessionManager.requestSerializer setValue:obj forHTTPHeaderField:key];
-        }];
-        _sessionManager.requestSerializer.timeoutInterval = self.networkConfig.timeoutInterval;
-        
+        _sessionManager = [self sessionManagerWithConfig:self.networkConfig];
     }
     return _sessionManager;
 }
 
+- (void)setNetworkConfig:(LQNetworkConfig *)networkConfig {
+    NSParameterAssert(networkConfig);
+    
+    if (_networkConfig != networkConfig) {
+        [_sessionManager.session finishTasksAndInvalidate];
+        _networkConfig = networkConfig;
+        _sessionManager = [self sessionManagerWithConfig:networkConfig];
+    }
+}
+
 # pragma mark - Private
+
+- (AFHTTPSessionManager *)sessionManagerWithConfig:(LQNetworkConfig *)config {
+    AFHTTPSessionManager *sessionManager;
+    if (config.baseURLString) {
+        sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:[NSURL URLWithString:config.baseURLString]];
+    } else {
+        sessionManager = [[AFHTTPSessionManager alloc] init];
+    }
+    
+    switch (config.requestType) {
+        case LQRequestSerializeJSON: {
+            sessionManager.requestSerializer = [AFJSONRequestSerializer serializer];
+            break;
+        }
+        case LQRequestSerializeHTTP: {
+            sessionManager.requestSerializer = [AFHTTPRequestSerializer serializer];
+            break;
+        }
+    }
+    
+    switch (config.responseType) {
+        case LQResponseSerializeJSON: {
+            AFJSONResponseSerializer *responseSerializer = [AFJSONResponseSerializer serializer];
+            responseSerializer.removesKeysWithNullValues = config.removesKeysWithNullValues;
+            sessionManager.responseSerializer = responseSerializer;
+            break;
+        }
+        case LQResponseSerializeData: {
+            sessionManager.responseSerializer = [AFHTTPResponseSerializer serializer];
+            break;
+        }
+    }
+    
+    [config.httpHeaders enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+        [sessionManager.requestSerializer setValue:obj forHTTPHeaderField:key];
+    }];
+    sessionManager.requestSerializer.timeoutInterval = config.timeoutInterval;
+    
+    return sessionManager;
+}
+
+
+# pragma mark - Log
+
 - (void)log:(NSString *)message {
     if (self.networkConfig.debugLogEnable) {
         NSLog(@"%@", message);
     }
 }
 
-- (void)logRequestFail:(NSError *)error {
+- (void)logRequestSucessWithType:(NSString *)type response:(NSURLResponse *)response responseObject:(id)responseObject {
+    if (!self.networkConfig.debugLogEnable) {
+        return;
+    }
+    
+    NSString *responseString = responseObject;
+    if (responseObject && [responseObject isKindOfClass:[NSData class]]) {
+        responseString = [[NSString alloc] initWithData:responseObject encoding:NSUTF8StringEncoding];
+    }
+    
+    [self log:[NSString stringWithFormat:@"========>\n%@ success: %@\nresponse: %@", type, response.URL, responseString]];
+}
+
+- (void)logRequestFailWithType:(NSString *)type error:(NSError *)error {
     if (!self.networkConfig.debugLogEnable || !error) {
         return;
     }
@@ -331,7 +364,7 @@
         responseString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     }
     
-    [self log:[NSString stringWithFormat:@"========>\nRequest fail: %@\nLocalizedDescription: %@\nResponseErrorData: %@", url, error.localizedDescription, responseString]];
+    [self log:[NSString stringWithFormat:@"========>\n%@ fail: %@\nLocalizedDescription: %@\nResponseErrorData: %@", type, url, error.localizedDescription, responseString]];
 }
 
 @end

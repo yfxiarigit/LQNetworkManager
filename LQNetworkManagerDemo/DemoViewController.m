@@ -17,8 +17,6 @@
     
     LQNetworkConfig *config = [[LQNetworkConfig alloc] init];
     config.baseURLString = @"https://httpbin.org";
-//  config.requestType = LQRequestSerializeJSON;
-//    config.responseType = LQResponseSerializeData;
     [LQNetworkManager sharedManager].networkConfig = config;
 
 }
@@ -60,6 +58,11 @@
 }
 
 - (void)UploadImage {
+    LQNetworkConfig *config = [[LQNetworkConfig alloc] init];
+    config.baseURLString = @"https://httpbin.org";
+    config.responseType = LQResponseSerializeData;
+    [LQNetworkManager sharedManager].networkConfig = config;
+
     NSString *path = [[NSBundle mainBundle] pathForResource:@"singer" ofType:@"png"];
     UIImage *image = [UIImage imageWithContentsOfFile:path];
     
@@ -93,11 +96,9 @@
 
 - (void)CancelAll {
     
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        [self Get];
-        [self Post];
-        [self UploadImage];
-    });
+    [self Get];
+    [self Post];
+    [self Download];
     
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [[LQNetworkManager sharedManager] cancelAllRequests];;
