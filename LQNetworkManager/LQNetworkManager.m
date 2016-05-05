@@ -197,18 +197,34 @@
     return uploadTask;
 }
 
+
+- (NSURLSessionDataTask *)uploadWithImage:(UIImage *)image
+                                     path:(NSString *)path
+                                     name:(NSString *)name
+                               parameters:(NSDictionary *)parameters
+                                 progress:(void (^)(NSProgress *))progress
+                               completion:(LQRequestCompletion)completion {
+    
+    return [self uploadWithImage:image path:path name:name fileName:nil mimeType:@"image/jped" compressed:YES parameters:parameters progress:progress completion:completion];
+}
+
 - (NSURLSessionDataTask *)uploadWithImage:(UIImage *)image
                                      path:(NSString *)path
                                      name:(NSString *)name
                                  fileName:(NSString *)fileName
                                  mimeType:(NSString *)mimeType
+                               compressed:(BOOL)compressed
                                parameters:(NSDictionary *)parameters
                                  progress:(void (^)(NSProgress *))progress
                                completion:(LQRequestCompletion)completion {
     if (!image || !path || path.length<1) {
         return nil;
     }
+    
     NSData *imageData = UIImageJPEGRepresentation(image, 1.0);
+    if (compressed && ((float)imageData.length/1024 > 1000)) {
+        imageData = UIImageJPEGRepresentation(image, 1024*1000.0/(float)imageData.length);
+    }
 
     if (!fileName) {
         NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
@@ -323,7 +339,9 @@
     }
     
     [config.httpHeaders enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-        [sessionManager.requestSerializer setValue:obj forHTTPHeaderField:key];
+        if ([key isKindOfClass:[NSString class]] && [obj isKindOfClass:[NSString class]]) {
+            [sessionManager.requestSerializer setValue:obj forHTTPHeaderField:key];
+        }
     }];
     sessionManager.requestSerializer.timeoutInterval = config.timeoutInterval;
     

@@ -18,7 +18,6 @@
     LQNetworkConfig *config = [[LQNetworkConfig alloc] init];
     config.baseURLString = @"https://httpbin.org";
     [LQNetworkManager sharedManager].networkConfig = config;
-
 }
 
 - (void)didReceiveMemoryWarning {
@@ -47,7 +46,6 @@
 }
 
 - (void)Post {
-    
     NSDictionary *parameters = @{@"name": @"LQ"};
     [[LQNetworkManager sharedManager] postWithPath:@"post" parameters:parameters completion:^(id responseObject, NSError *error) {
     }];
@@ -67,7 +65,7 @@
     UIImage *image = [UIImage imageWithContentsOfFile:path];
     
     NSDictionary *parameters = @{@"isTest":@"False", @"version":@"how-old.net"};
-    [[LQNetworkManager sharedManager] uploadWithImage:image path:@"http://how-old.net/Home/Analyze" name:@"Image" fileName:nil mimeType:nil parameters:parameters progress:^(NSProgress *progress) {
+    [[LQNetworkManager sharedManager] uploadWithImage:image path:@"http://how-old.net/Home/Analyze" name:@"Image" parameters:parameters progress:^(NSProgress *progress) {
         
         NSLog(@"Upload progress:%f, completedBytes:%lld, totalBytes:%lld", progress.fractionCompleted, progress.completedUnitCount, progress.totalUnitCount);
         
@@ -95,7 +93,6 @@
 }
 
 - (void)CancelAll {
-    
     [self Get];
     [self Post];
     [self Download];
