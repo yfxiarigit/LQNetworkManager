@@ -44,7 +44,7 @@
 
 - (NSURLSessionDataTask *)getWithPath:(NSString *)path
                            parameters:(id)parameters
-                             progress:(void (^)(NSProgress * _Nonnull))progress
+                             progress:(LQRequestProgress)progress
                            completion:(LQRequestCompletion)completion {
     return [self requestWithPath:path HTTPMethod:LQHTTPMethodGet parameters:parameters progress:progress completion:completion];
 }
@@ -53,13 +53,19 @@
                             parameters:(id)parameters
                             completion:(LQRequestCompletion)completion {
     return [self requestWithPath:path HTTPMethod:LQHTTPMethodPost parameters:parameters progress:nil completion:completion];
+}
 
+- (NSURLSessionDataTask *)postWithPath:(NSString *)path
+                            parameters:(id)parameters
+                              progress:(LQRequestProgress)progress
+                            completion:(LQRequestCompletion)completion {
+    return [self requestWithPath:path HTTPMethod:LQHTTPMethodPost parameters:parameters progress:progress completion:completion];
 }
 
 - (NSURLSessionDataTask *)requestWithPath:(NSString *)path
                            HTTPMethod:(LQHTTPMethod)HTTPMethod
                            parameters:(id)parameters
-                             progress:(void (^)(NSProgress * _Nonnull))progress
+                             progress:(LQRequestProgress)progress
                            completion:(LQRequestCompletion)completion {
 
     NSURLSessionDataTask *task = nil;

@@ -11,6 +11,7 @@
 #import "LQNetworkConfig.h"
 
 typedef void (^LQRequestCompletion)(id responseObject, NSError *error);
+typedef void (^LQRequestProgress)(NSProgress *progress);
 
 typedef NS_ENUM(NSUInteger, LQHTTPMethod) {
     LQHTTPMethodGet,
@@ -39,6 +40,11 @@ typedef NS_ENUM(NSUInteger, LQHTTPMethod) {
                            parameters:(id)parameters
                            completion:(LQRequestCompletion)completion;
 
+- (NSURLSessionDataTask *)getWithPath:(NSString *)path
+                           parameters:(id)parameters
+                             progress:(LQRequestProgress)progress
+                           completion:(LQRequestCompletion)completion;
+
 /**
  *  Post request
  *
@@ -51,6 +57,11 @@ typedef NS_ENUM(NSUInteger, LQHTTPMethod) {
                            parameters:(id)parameters
                            completion:(LQRequestCompletion)completion;
 
+- (NSURLSessionDataTask *)postWithPath:(NSString *)path
+                            parameters:(id)parameters
+                              progress:(LQRequestProgress)progress
+                            completion:(LQRequestCompletion)completion;
+
 /**
  *  Download request
  *
@@ -62,7 +73,7 @@ typedef NS_ENUM(NSUInteger, LQHTTPMethod) {
  */
 - (NSURLSessionDownloadTask *)downloadWithPath:(NSString *)path
                                     saveToPath:(NSString *)saveToPath
-                                      progress:(void (^)(NSProgress *progress))progress
+                                      progress:(LQRequestProgress)progress
                                     completion:(LQRequestCompletion)completion;
 
 /**
@@ -76,7 +87,7 @@ typedef NS_ENUM(NSUInteger, LQHTTPMethod) {
  */
 - (NSURLSessionUploadTask *)uploadFileWithPath:(NSString *)path
                                       fromFile:(NSString *)filePath
-                                      progress:(void (^)(NSProgress *progress))progress
+                                      progress:(LQRequestProgress)progress
                                     completion:(LQRequestCompletion)completion;
 
 /**
@@ -94,7 +105,7 @@ typedef NS_ENUM(NSUInteger, LQHTTPMethod) {
                                      path:(NSString *)path
                                      name:(NSString *)name
                                parameters:(NSDictionary *)parameters
-                                 progress:(void (^)(NSProgress *))progress
+                                 progress:(LQRequestProgress)progress
                                completion:(LQRequestCompletion)completion;
 
 /**
@@ -118,7 +129,7 @@ typedef NS_ENUM(NSUInteger, LQHTTPMethod) {
                                  mimeType:(NSString *)mimeType
                                compressed:(BOOL)compressed
                                parameters:(NSDictionary*)parameters
-                                 progress:(void (^)(NSProgress *progress))progress
+                                 progress:(LQRequestProgress)progress
                                completion:(LQRequestCompletion)completion;
 
 /**
