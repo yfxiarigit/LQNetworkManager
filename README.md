@@ -1,9 +1,18 @@
 # LQNetworkManager
 -
+
 A delightful networking library based on AFNetworking 3.0.
 
 ### Usage
 -
+Firstly,setup the configuration for the network manager:
+
+```
+LQNetworkConfig *config = [[LQNetworkConfig alloc] init];
+config.baseURLString = @"https://example.com";
+config.timeoutInterval = 60;
+[LQNetworkManager sharedManager].networkConfig = config;
+```
 
 * Get request:
 
