@@ -1,6 +1,5 @@
-# LQNetworkManager
+### LQNetworkManager
 -
-
 A delightful networking library based on AFNetworking 3.0.
 
 ### Usage
