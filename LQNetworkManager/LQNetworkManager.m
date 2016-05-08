@@ -36,35 +36,59 @@
 }
 
 #pragma mark - Request
+
 - (NSURLSessionDataTask *)getWithPath:(NSString *)path
                             parameters:(id)parameters
                             completion:(LQRequestCompletion)completion {
-    return [self requestWithPath:path HTTPMethod:LQHTTPMethodGet parameters:parameters progress:nil completion:completion];
+    return [self requestWithPath:path HTTPMethod:LQHTTPMethodGet parameters:parameters  cached:NO progress:nil completion:completion];
 }
 
 - (NSURLSessionDataTask *)getWithPath:(NSString *)path
                            parameters:(id)parameters
                              progress:(LQRequestProgress)progress
                            completion:(LQRequestCompletion)completion {
-    return [self requestWithPath:path HTTPMethod:LQHTTPMethodGet parameters:parameters progress:progress completion:completion];
+    return [self requestWithPath:path HTTPMethod:LQHTTPMethodGet parameters:parameters cached:NO progress:progress completion:completion];
+}
+
+- (NSURLSessionDataTask *)getAndCacheWithPath:(NSString *)path
+                           parameters:(id)parameters
+                           completion:(LQRequestCompletion)completion {
+    AFHTTPRequestSerializer *serializer = [self.sessionManager.requestSerializer copy];
+    NSString *URLKey = [self lastModifiedKeyWithPath:path parameters:parameters];
+    NSString *lastModified = [self.networkConfig.responseCache objectForKey:URLKey];
+    if (lastModified) {
+        [self.sessionManager.requestSerializer setValue:lastModified forHTTPHeaderField:@"If-Modified-Since"];
+    }
+    URLKey = [self etagKeyWithPath:path parameters:parameters];
+    NSString *etag = [self.networkConfig.responseCache objectForKey:URLKey];
+    if (etag) {
+        [self.sessionManager.requestSerializer setValue:etag forHTTPHeaderField:@"If-None-Match"];
+    }
+    self.sessionManager.requestSerializer.cachePolicy = NSURLRequestReloadIgnoringCacheData;
+    
+    NSURLSessionDataTask *task = [self requestWithPath:path HTTPMethod:LQHTTPMethodGet parameters:parameters cached:YES progress:nil completion:completion];
+    self.sessionManager.requestSerializer = serializer;
+    
+    return task;
 }
 
 - (NSURLSessionDataTask *)postWithPath:(NSString *)path
                             parameters:(id)parameters
                             completion:(LQRequestCompletion)completion {
-    return [self requestWithPath:path HTTPMethod:LQHTTPMethodPost parameters:parameters progress:nil completion:completion];
+    return [self requestWithPath:path HTTPMethod:LQHTTPMethodPost parameters:parameters  cached:NO progress:nil completion:completion];
 }
 
 - (NSURLSessionDataTask *)postWithPath:(NSString *)path
                             parameters:(id)parameters
                               progress:(LQRequestProgress)progress
                             completion:(LQRequestCompletion)completion {
-    return [self requestWithPath:path HTTPMethod:LQHTTPMethodPost parameters:parameters progress:progress completion:completion];
+    return [self requestWithPath:path HTTPMethod:LQHTTPMethodPost parameters:parameters cached:NO progress:progress completion:completion];
 }
 
 - (NSURLSessionDataTask *)requestWithPath:(NSString *)path
                            HTTPMethod:(LQHTTPMethod)HTTPMethod
                            parameters:(id)parameters
+                               cached:(BOOL)cached
                              progress:(LQRequestProgress)progress
                            completion:(LQRequestCompletion)completion {
 
@@ -79,16 +103,57 @@
                 }
                 
             } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+                if (cached) {
+                    NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)task.response;
+                    NSString *URLKey = [self lastModifiedKeyWithPath:path parameters:parameters];
+                    NSString *lastModified = [httpResponse.allHeaderFields objectForKey:@"Last-Modified"];
+                    if (URLKey && lastModified) {
+                        [self.networkConfig.responseCache setObject:lastModified forKey:URLKey];
+                    }
+                    URLKey = [self etagKeyWithPath:path parameters:parameters];
+                    NSString *etag = [httpResponse.allHeaderFields objectForKey:@"Etag"];
+                    if (URLKey && etag) {
+                        [self.networkConfig.responseCache setObject:etag forKey:URLKey];
+                    }
+                }
                 
                 [self logRequestSucessWithType:@"Get" response:task.response responseObject:responseObject];
                 completion(responseObject, nil);
                 
             } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+                if (!cached) {
+                    [self logRequestFailWithType:@"Get" error:error];
+                    completion(nil, error);
+                    return;
+                }
                 
-                [self logRequestFailWithType:@"Get" error:error];
-                completion(nil, error);
+                id responseObject = nil;
+                NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)task.response;
+                if (httpResponse.statusCode == 304) { // Not Modified
+                    NSCachedURLResponse *cacheResponse = [[NSURLCache sharedURLCache] cachedResponseForRequest:task.currentRequest];
+                    responseObject = cacheResponse.data;
+                }
                 
+                if (responseObject) {
+                    NSString *URLKey = [self lastModifiedKeyWithPath:path parameters:parameters];
+                    NSString *lastModified = [httpResponse.allHeaderFields objectForKey:@"Last-Modified"];
+                    if (URLKey && lastModified) {
+                        [self.networkConfig.responseCache setObject:lastModified forKey:URLKey];
+                    }
+                    URLKey = [self etagKeyWithPath:path parameters:parameters];
+                    NSString *etag = [httpResponse.allHeaderFields objectForKey:@"Etag"];
+                    if (URLKey && etag) {
+                        [self.networkConfig.responseCache setObject:etag forKey:URLKey];
+                    }
+
+                    [self logRequestSucessWithType:@"Get Cache->" response:task.response responseObject:responseObject];
+                    completion(responseObject, nil);
+                } else {
+                    [self logRequestFailWithType:@"Get" error:error];
+                    completion(nil, error);
+                }
             }];
+            
             [self log:[NSString stringWithFormat:@"========>\n%@: %@\nparameters:%@", task.currentRequest.HTTPMethod, task.currentRequest.URL, parameters]];
         }
             break;
@@ -343,7 +408,7 @@
             break;
         }
     }
-    
+    sessionManager.requestSerializer.cachePolicy = NSURLRequestReloadIgnoringLocalCacheData;
     [config.httpHeaders enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
         if ([key isKindOfClass:[NSString class]] && [obj isKindOfClass:[NSString class]]) {
             [sessionManager.requestSerializer setValue:obj forHTTPHeaderField:key];
@@ -354,6 +419,36 @@
     return sessionManager;
 }
 
+- (NSString *)lastModifiedKeyWithPath:(NSString *)path parameters:(NSDictionary *)parameters{
+    if (!path) {
+        return nil;
+    }
+    
+    NSMutableString *URLKey = [NSMutableString stringWithString:@"LastModified"];
+    if (self.networkConfig.baseURLString) {
+        [URLKey appendString:self.networkConfig.baseURLString];
+    }
+    [URLKey appendString:path];
+    if (parameters) {
+        [URLKey appendString:AFQueryStringFromParameters(parameters)];
+    }
+    return URLKey;
+}
+
+- (NSString *)etagKeyWithPath:(NSString *)path parameters:(NSDictionary *)parameters{
+    if (path) {
+        return nil;
+    }
+    NSMutableString *URLKey = [NSMutableString stringWithString:@"Etag"];
+    if (self.networkConfig.baseURLString) {
+        [URLKey appendString:self.networkConfig.baseURLString];
+    }
+    [URLKey appendString:path];
+    if (parameters) {
+        [URLKey appendString:AFQueryStringFromParameters(parameters)];
+    }
+    return URLKey;
+}
 
 # pragma mark - Log
 

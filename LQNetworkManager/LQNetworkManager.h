@@ -45,6 +45,10 @@ typedef NS_ENUM(NSUInteger, LQHTTPMethod) {
                              progress:(LQRequestProgress)progress
                            completion:(LQRequestCompletion)completion;
 
+- (NSURLSessionDataTask *)getAndCacheWithPath:(NSString *)path
+                           parameters:(id)parameters
+                           completion:(LQRequestCompletion)completion;
+
 /**
  *  Post request
  *

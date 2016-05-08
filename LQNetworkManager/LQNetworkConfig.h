@@ -27,6 +27,7 @@ typedef NS_ENUM(NSUInteger, LQResponseSerializeType) {
 @property (nonatomic, assign) NSTimeInterval timeoutInterval;
 @property (nonatomic, assign) BOOL debugLogEnable;
 @property (nonatomic, assign) BOOL removesKeysWithNullValues;
+@property (nonatomic, strong) NSMutableDictionary *responseCache;
 
 - (instancetype)initWithBaseURLString:(NSString *)URLString;
 

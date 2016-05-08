@@ -98,5 +98,15 @@
     });
 }
 
+- (void)HTTPCache {
+//    LQNetworkConfig *config = [[LQNetworkConfig alloc] initWithBaseURLString:@"https://httpbin.org"];
+//    
+//    config.httpHeaders = @{@"If-Modified-Since":@"Sun, 08 May 2016 03:47:53 GMT", @"If-None-Match":@"a08805064c0b4b61a869d033cc7a8840"};
+//    [LQNetworkManager sharedManager].networkConfig = config;
+
+    [[LQNetworkManager sharedManager] getAndCacheWithPath:@"/cache" parameters:nil completion:^(id responseObject, NSError *error) {
+        
+    }];
+}
 
 @end

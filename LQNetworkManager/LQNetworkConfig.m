@@ -8,6 +8,10 @@
 
 #import "LQNetworkConfig.h"
 
+@interface LQNetworkConfig()
+
+@end
+
 @implementation LQNetworkConfig
 
 - (instancetype)init {
@@ -29,6 +33,14 @@
 #endif
     }
     return self;
+}
+
+
+- (NSMutableDictionary *)responseCache {
+    if (!_responseCache) {
+        _responseCache = [NSMutableDictionary dictionary];
+    }
+    return _responseCache;
 }
 
 @end
