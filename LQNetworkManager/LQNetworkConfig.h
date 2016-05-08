@@ -20,12 +20,14 @@ typedef NS_ENUM(NSUInteger, LQResponseSerializeType) {
 
 @interface LQNetworkConfig : NSObject
 
-@property (nonatomic, copy) NSString *baseURLString;
+@property (readonly, nonatomic, copy) NSString *baseURLString;
 @property (nonatomic, strong) NSDictionary *httpHeaders;
 @property (nonatomic, assign) LQRequestSerializeType requestType;
 @property (nonatomic, assign) LQResponseSerializeType responseType;
 @property (nonatomic, assign) NSTimeInterval timeoutInterval;
 @property (nonatomic, assign) BOOL debugLogEnable;
 @property (nonatomic, assign) BOOL removesKeysWithNullValues;
+
+- (instancetype)initWithBaseURLString:(NSString *)URLString;
 
 @end

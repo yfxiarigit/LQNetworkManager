@@ -15,9 +15,6 @@
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
     
-    LQNetworkConfig *config = [[LQNetworkConfig alloc] init];
-    config.baseURLString = @"https://httpbin.org";
-    [LQNetworkManager sharedManager].networkConfig = config;
 }
 
 - (void)didReceiveMemoryWarning {
@@ -56,8 +53,7 @@
 }
 
 - (void)UploadImage {
-    LQNetworkConfig *config = [[LQNetworkConfig alloc] init];
-    config.baseURLString = @"https://httpbin.org";
+    LQNetworkConfig *config = [[LQNetworkConfig alloc] initWithBaseURLString:@"https://httpbin.org"];
     config.responseType = LQResponseSerializeData;
     [LQNetworkManager sharedManager].networkConfig = config;
 
@@ -101,5 +97,6 @@
         [[LQNetworkManager sharedManager] cancelAllRequests];;
     });
 }
+
 
 @end

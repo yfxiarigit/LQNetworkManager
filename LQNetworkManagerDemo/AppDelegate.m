@@ -7,6 +7,7 @@
 //
 
 #import "AppDelegate.h"
+#import "LQNetworkManager.h"
 
 @interface AppDelegate ()
 
@@ -17,6 +18,9 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
+    LQNetworkConfig *config = [[LQNetworkConfig alloc] initWithBaseURLString:@"https://httpbin.org"];
+    [LQNetworkManager sharedManager].networkConfig = config;
+
     return YES;
 }
 

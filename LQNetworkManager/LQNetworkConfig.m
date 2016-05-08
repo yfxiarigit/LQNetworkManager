@@ -11,8 +11,13 @@
 @implementation LQNetworkConfig
 
 - (instancetype)init {
+    return [self initWithBaseURLString:nil];
+}
+
+- (instancetype)initWithBaseURLString:(NSString *)URLString {
     self = [super init];
     if (self) {
+        _baseURLString = URLString;
         _timeoutInterval = 60.0;
         _removesKeysWithNullValues = YES;
         _requestType = LQRequestSerializeHTTP;
@@ -23,7 +28,6 @@
         _debugLogEnable = NO;
 #endif
     }
-    
     return self;
 }
 
